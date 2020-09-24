@@ -1,8 +1,8 @@
 import { app, uuid } from 'mu';
-import request from 'request';
 import services from '/config/rules.js';
 import bodyParser from 'body-parser';
 import dns from 'dns';
+import RequestDispatcher from './lib/request-dispatcher';
 
 // Also parse application/json as json
 app.use( bodyParser.json( {
@@ -11,6 +11,8 @@ app.use( bodyParser.json( {
   },
   limit: '500mb'
 } ) );
+
+const dispatcher = new RequestDispatcher();
 
 // Log server config if requested
 if( process.env["LOG_SERVER_CONFIGURATION"] )
@@ -79,12 +81,14 @@ async function informWatchers( changeSets, res, muCallIdTrail ){
       if( process.env["DEBUG_DELTA_SEND"] )
         console.log(`Going to send ${entry.callback.method} to ${entry.callback.url}`);
 
+      const request = buildRequest( entry, originFilteredChangeSets, muCallIdTrail )
+
       if( entry.options && entry.options.gracePeriod ) {
         setTimeout(
-          () => sendRequest( entry, originFilteredChangeSets, muCallIdTrail ),
+          () => dispatcher.send(request),
           entry.options.gracePeriod );
       } else {
-        sendRequest( entry, originFilteredChangeSets, muCallIdTrail );
+        dispatcher.send(request);
       }
     }
   } );
@@ -144,46 +148,26 @@ function formatChangesetBody( changeSets, options ) {
   }
 }
 
-async function sendRequest( entry, changeSets, muCallIdTrail ) {
-  let requestObject; // will contain request information
+function buildRequest( entry, changeSets, muCallIdTrail ) {
+  let request = {
+    method: entry.callback.method,
+    url: entry.callback.url,
+    headers: {
+      'Content-Type': 'application/json',
+      'MU-AUTH-ALLOWED-GROUPS': changeSets[0].allowedGroups,
+      'mu-call-id-trail': muCallIdTrail,
+      'mu-call-id': uuid(),
+    },
+  };
 
-  // construct the requestObject
-  const method = entry.callback.method;
-  const url = entry.callback.url;
-  const headers = { "Content-Type": "application/json", "MU-AUTH-ALLOWED-GROUPS": changeSets[0].allowedGroups, "mu-call-id-trail": muCallIdTrail, "mu-call-id": uuid() };
-
-  if( entry.options && entry.options.resourceFormat ) {
-    // we should send contents
-    const body = formatChangesetBody( changeSets, entry.options );
+  if (entry.options && entry.options.resourceFormat) {
 
     // TODO: we now assume the mu-auth-allowed-groups will be the same
     // for each changeSet.  that's a simplification and we should not
     // depend on it.
-
-    requestObject = {
-      url, method,
-      headers,
-      body: body
-    };
-  } else {
-    // we should only inform
-    requestObject = { url, method, headers };
+    request['body'] = formatChangesetBody( changeSets, entry.options );
   }
-
-  if( process.env["DEBUG_DELTA_SEND"] )
-    console.log(`Executing send ${method} to ${url}`);
-
-  request( requestObject, function( error, response, body ) {
-    if( error ) {
-      console.log(`Could not send request ${method} ${url}`);
-      console.log(error);
-      console.log(`NOT RETRYING`); // TODO: retry a few times when delta's fail to send
-    }
-
-    if( response ) {
-      // console.log( body );
-    }
-  });
+  return request;
 }
 
 async function filterMatchesForOrigin( changeSets, entry ) {
