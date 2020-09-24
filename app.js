@@ -3,6 +3,12 @@ import services from '/config/rules.js';
 import bodyParser from 'body-parser';
 import dns from 'dns';
 import RequestDispatcher from './lib/request-dispatcher';
+import {
+  DEBUG_DELTA_MATCH, DEBUG_DELTA_SEND,
+  DEBUG_TRIPLE_MATCHES_SPEC,
+  LOG_REQUESTS,
+  LOG_SERVER_CONFIGURATION,
+} from './lib/environment';
 
 // Also parse application/json as json
 app.use( bodyParser.json( {
@@ -15,7 +21,7 @@ app.use( bodyParser.json( {
 const dispatcher = new RequestDispatcher();
 
 // Log server config if requested
-if( process.env["LOG_SERVER_CONFIGURATION"] )
+if( LOG_SERVER_CONFIGURATION )
   console.log(JSON.stringify( services ));
 
 app.get( '/', function( req, res ) {
@@ -24,7 +30,7 @@ app.get( '/', function( req, res ) {
 } );
 
 app.post( '/', function( req, res ) {
-  if( process.env["LOG_REQUESTS"] ) {
+  if( LOG_REQUESTS ) {
     console.log("Logging request body");
     console.log(req.body);
   }
@@ -50,13 +56,13 @@ app.post( '/', function( req, res ) {
 async function informWatchers( changeSets, res, muCallIdTrail ){
   services.map( async (entry) => {
     // for each entity
-    if( process.env["DEBUG_DELTA_MATCH"] )
+    if( DEBUG_DELTA_MATCH )
       console.log(`Checking if we want to send to ${entry.callback.url}`);
 
     const matchSpec = entry.match;
 
     const originFilteredChangeSets = await filterMatchesForOrigin( changeSets, entry );
-    if( process.env["DEBUG_TRIPLE_MATCHES_SPEC"] && entry.options.ignoreFromSelf )
+    if( DEBUG_TRIPLE_MATCHES_SPEC && entry.options.ignoreFromSelf )
       console.log(`There are ${originFilteredChangeSets.length} changes sets not from ${hostnameForEntry( entry )}`);
 
     let allInserts = [];
@@ -73,12 +79,12 @@ async function informWatchers( changeSets, res, muCallIdTrail ){
         changedTriples
         .some( (triple) => tripleMatchesSpec( triple, matchSpec ) );
 
-    if( process.env["DEBUG_TRIPLE_MATCHES_SPEC"] )
+    if( DEBUG_TRIPLE_MATCHES_SPEC )
       console.log(`Triple matches spec? ${someTripleMatchedSpec}`);
 
     if( someTripleMatchedSpec ) {
       // inform matching entities
-      if( process.env["DEBUG_DELTA_SEND"] )
+      if( DEBUG_DELTA_SEND )
         console.log(`Going to send ${entry.callback.method} to ${entry.callback.url}`);
 
       const request = buildRequest( entry, originFilteredChangeSets, muCallIdTrail )
@@ -96,7 +102,7 @@ async function informWatchers( changeSets, res, muCallIdTrail ){
 
 function tripleMatchesSpec( triple, matchSpec ) {
   // form of triple is {s, p, o}, same as matchSpec
-  if( process.env["DEBUG_TRIPLE_MATCHES_SPEC"] )
+  if( DEBUG_TRIPLE_MATCHES_SPEC )
     console.log(`Does ${JSON.stringify(triple)} match ${JSON.stringify(matchSpec)}?`);
 
   for( let key in matchSpec ){
