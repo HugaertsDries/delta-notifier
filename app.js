@@ -18,7 +18,10 @@ app.use( bodyParser.json( {
   limit: '500mb'
 } ) );
 
-const dispatcher = new RequestDispatcher();
+let dispatcher;
+new RequestDispatcher().init().then(disp => {
+  dispatcher = disp;
+});
 
 // Log server config if requested
 if( LOG_SERVER_CONFIGURATION )
