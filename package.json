@@ -22,6 +22,8 @@
   },
   "homepage": "https://github.com/mu-semtech/delta-notifier#readme",
   "dependencies": {
+    "fs-extra": "^9.0.1",
+    "moment": "^2.29.0",
     "node-fetch": "^2.6.1"
   }
 }
