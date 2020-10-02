@@ -29,6 +29,7 @@ Default inclusion of the delta-notifier looks like this:
     image: semtech/mu-delta-notifier
     volumes:
       - ./config/delta:/config
+      - ./data/delta/queues:/queues
 ```
 
 ### Receiving delta notifications
