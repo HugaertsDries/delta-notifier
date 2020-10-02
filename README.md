@@ -63,12 +63,23 @@ The exported property contains an array of definitions, each linking a match to 
   - `match.predicate`: Matches the predicade.  Both `type` and `value` may be specified.
   - `match.object`: Matches the object.  Both `type` and `value` may be specified.
   - `callback`: The place to inform about a matched delta
+  - `callback.id`: Unique ID for the callback service (not mandatory)
   - `callback.url`: URL to inform about a match
   - `callback.method`: Method to use when informing about a match
   - `options`: Options describing the match
   - `options.resourceFormat`: Version format describing the format of the contents.  Keys may be added to this format, but they may not be removed.  Filter the properties as needed.
   - `options.gracePeriod`: Only send the response after a certain amount of time.  This will group changes in the future.
   - `options.ignoreFromSelf`: Don't inform about changes that originated from the microservice to be informed (based on the hostname).
+
+### Environment Variables
+
+Some extra configurations to customise some accepts off the delta-notifier behavior:
+
+- `QUEUE_PERSIST_FOLDER`: The folder in which queue save data should be stored. By default `/queues/`.
+- `REMOVE_DANGLING_QUEUES`: Enable or disable if dangling queue save data should be removed if detected. By default `true`.
+- `REQUEST_BACKOFF_INITIAL_RETRY_WAIT`: The initial retry timeout after a failed request. Be default 50ms.
+- `REQUEST_BACKOFF_MAX_RETRY_WAIT`: The max amount of retry timeout at which point we determine the endpoint to be dead or broken. By default 600000ms or 10min.
+- `REQUEST_BACKOFF_RATE`: The exponential back-off growth rate. Be default 0.3
 
 ## Delta formats
 
@@ -112,6 +123,8 @@ Any falsy value will currently not send the changed triples to the consuming ser
 
 Debugging can be enabled in the service by setting environment variables.  The following may be handy:
 
+  - `LOG_SERVER_CONFIGURATION`: Logs the contents of the configuration it has received
+  - `LOG_REQUESTS`: Logs the incoming request body
   - `DEBUG_DELTA_SEND`: Logs all delta messages that are being sent to clients
   - `DEBUG_DELTA_MATCH`: Logs a check for each target block, indicating a check will occur
   - `DEBUG_TRIPLE_MATCHES_SPEC`: Extensive logging for triples matching a given specification.  Handy when requests are unexpectedly not sent.
