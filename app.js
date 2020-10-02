@@ -183,8 +183,14 @@ async function filterMatchesForOrigin( changeSets, entry ) {
   if( ! entry.options || !entry.options.ignoreFromSelf ) {
     return changeSets;
   } else {
-    const originIpAddress = await getServiceIp( entry );
-    return changeSets.filter( (changeSet) => changeSet.origin != originIpAddress );
+    try {
+      const originIpAddress = await getServiceIp( entry );
+      return changeSets.filter( (changeSet) => changeSet.origin != originIpAddress );
+    } catch (e) {
+      console.log("Something went wrong while trying to retrieve the service IP. Are you certain it is running?");
+      console.error(e);
+      return changeSets; // we assume that if the service is not running, it can not create changes
+    }
   }
 }
 
